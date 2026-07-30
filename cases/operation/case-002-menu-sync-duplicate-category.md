@@ -1,0 +1,48 @@
+# Case 002 - 外送平台菜單商品未上架
+
+## 客服反映內容
+
+項次：[ID]  
+店名：[門市/公司]  
+結帳方式：前結  
+版次：v1.3.2  
+線上點餐平台版本：[線上點餐平台]  
+線上點餐平台帳號/密碼/檢碼：[SECRET]
+
+問題：
+
+客服回報外送平台菜單已確認商品未分至兩個類別，商品圖片大小也已調整，並且已手動與自動同步菜單到線上點餐平台。同步過程未顯示異常，但門店新品全部未上架到外送平台菜單，部分湯品也未上架。
+
+## 查詢結果
+
+檢查菜單分類資料後，確認仍有商品重複放置在不同點餐類別。
+
+使用檢核語法查詢外送平台已勾選類別中，同一個商品是否出現在多個類別：
+
+```sql
+SELECT
+    B.[ProductName] [商品名稱],
+    C.[MenuTypeName] [點餐類別]
+FROM [MenuItem] A
+LEFT JOIN [Products] B ON A.[ProductID] = B.[ProductID]
+LEFT JOIN [MenuType] C ON A.[MenuTypeID] = C.[MenuTypeID]
+INNER JOIN [tbPlatformMenuType] D ON C.[MenuTypeID] = D.[MenuTypeID]
+WHERE D.[PlatformTypeID] = '[PLATFORM_ID]'
+  AND D.[IsChecked] = '1'
+  AND A.[ProductID] IN (
+      SELECT [ProductID]
+      FROM [MenuItem] mA
+      INNER JOIN [tbPlatformMenuType] mD ON mA.[MenuTypeID] = mD.[MenuTypeID]
+      WHERE mD.[PlatformTypeID] = '[PLATFORM_ID]'
+        AND mD.[IsChecked] = '1'
+      GROUP BY [ProductID]
+      HAVING COUNT([ProductID]) > 1
+  )
+ORDER BY B.[ProductName]
+```
+
+查詢結果表示問題並非菜單同步程序異常，而是商品分類設定仍不符合外送平台上架規則。
+
+## 處理判定
+
+操作/設定問題，請客服向店家說明。
